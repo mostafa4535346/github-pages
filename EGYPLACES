@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EGYPlaces</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Cairo', sans-serif;
+            background-color: #f0f4f7;
+            color: #333;
+        }
+
+        #language-selection {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            flex-direction: column;
+        }
+
+        #language-selection button {
+            margin: 10px;
+            padding: 15px 30px;
+            background-color: #1d3557;
+            color: white;
+            border: none;
+            font-size: 16px;
+            cursor: pointer;
+            border-radius: 5px;
+        }
+
+        header {
+            background-color: #1d3557;
+            color: white;
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        header .logo {
+            font-size: 2rem;
+            font-weight: 600;
+        }
+
+        .search-container {
+            display: flex;
+            align-items: center;
+        }
+
+        .search-container input {
+            padding: 10px;
+            border: none;
+            border-radius: 5px;
+            margin-left: 10px;
+            width: 300px;
+        }
+
+        .search-container button {
+            padding: 10px 20px;
+            background-color: #e63946;
+            border: none;
+            border-radius: 5px;
+            color: white;
+            cursor: pointer;
+        }
+
+        main {
+            padding: 40px 20px;
+            text-align: center;
+        }
+
+        #places-list {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            margin-top: 30px;
+        }
+
+        .place-card {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s;
+        }
+
+        .place-card:hover {
+            transform: translateY(-10px);
+        }
+
+        .place-card img {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+            border-radius: 10px;
+        }
+
+        footer {
+            background-color: #1d3557;
+            color: white;
+            text-align: center;
+            padding: 10px;
+            position: fixed;
+            width: 100%;
+            bottom: 0;
+        }
+
+        #add-place-form {
+            margin-top: 40px;
+            background-color: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        #add-place-form input, #add-place-form select, #add-place-form textarea {
+            margin-bottom: 10px;
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+
+        #add-place-form button {
+            padding: 10px 20px;
+            background-color: #e63946;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        #image-preview {
+            margin-top: 10px;
+            max-width: 100%;
+            max-height: 200px;
+            object-fit: cover;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Language Selection -->
+    <div id="language-selection">
+        <h2>Select Language / اختر اللغة</h2>
+        <button onclick="setLanguage('en')">English</button>
+        <button onclick="setLanguage('ar')">عربي</button>
+    </div>
+
+    <!-- App Content -->
+    <div id="app-content" style="display: none;">
+        <header>
+            <div class="logo" id="logo">EGYPlaces</div>
+            <div class="search-container">
+                <input type="text" id="searchBox" placeholder="Search for places in Egypt..." />
+                <button onclick="searchPlaces()" id="searchButton">Search</button>
+            </div>
+        </header>
+
+        <main>
+            <section id="places-list">
+                <!-- Place data will be injected here -->
+            </section>
+
+            <!-- Form to Add New Places -->
+            <section id="add-place-form">
+                <h3>Add a New Place / إضافة مكان جديد</h3>
+                <input type="text" id="placeName" placeholder="Place Name" required />
+                <textarea id="placeDescription" placeholder="Description (optional)"></textarea>
+                <input type="text" id="placePhone" placeholder="Phone Number (optional)" />
+                <input type="file" id="placePhoto" accept="image/*" />
+                <img id="image-preview" alt="Preview" />
+                <select id="placeCategory">
+                    <option value="restaurant">Restaurant</option>
+                    <option value="barber">Barber</option>
+                    <option value="supermarket">Supermarket</option>
+                </select>
+                <button onclick="addPlace()">Add Place / إضافة مكان</button>
+            </section>
+        </main>
+
+        <footer>
+            <p id="footerText">EGYPlaces &copy; 2025</p>
+        </footer>
+    </div>
+
+    <script>
+        // Define the places data for both languages
+        const placesData = {
+            en: [],
+            ar: []
+        };
+
+        // Render places dynamically based on the selected language
+        function renderPlaces(language) {
+            const places = placesData[language];
+            const placesList = document.getElementById('places-list');
+            placesList.innerHTML = "";
+            places.forEach(place => {
+                const card = document.createElement('div');
+                card.classList.add('place-card');
+                card.innerHTML = `
+                    <img src="${place.image || 'https://via.placeholder.com/400x300?text=No+Image'}" alt="${place.name}" />
+                    <h3>${place.name}</h3>
+                    <p>${place.description || 'No description provided'}</p>
+                    <p><strong>Phone:</strong> ${place.phone || 'Not provided'}</p>
+                    <p><strong>Category:</strong> ${place.category}</p>
+                `;
+                placesList.appendChild(card);
+            });
+        }
+
+        // Handle language selection
+        function setLanguage(language) {
+            localStorage.setItem('language', language);
+            showAppContent(language);
+        }
+
+        // Show app content after language is selected
+        function showAppContent(language) {
+            document.getElementById('language-selection').style.display = 'none';
+            document.getElementById('app-content').style.display = 'block';
+
+            if (language === 'ar') {
+                document.body.setAttribute('dir', 'rtl');
+                document.getElementById('logo').innerText = 'إيجي بليسز';
+                document.getElementById('searchBox').placeholder = 'ابحث عن أماكن في مصر...';
+                document.getElementById('searchButton').innerText = 'بحث';
+                document.getElementById('footerText').innerText = 'إيجي بليسز &copy; 2025';
+            } else {
+                document.body.setAttribute('dir', 'ltr');
+                document.getElementById('logo').innerText = 'EGYPlaces';
+                document.getElementById('searchBox').placeholder = 'Search for places in Egypt...';
+                document.getElementById('searchButton').innerText = 'Search';
+                document.getElementById('footerText').innerText = 'EGYPlaces &copy; 2025';
+            }
+
+            renderPlaces(language);
+        }
+
+        // Add a new place
+        function addPlace() {
+            const name = document.getElementById('placeName').value;
+            const description = document.getElementById('placeDescription').value;
+            const phone = document.getElementById('placePhone').value;
+            const category = document.getElementById('placeCategory').value;
+            const imageFile = document.getElementById('placePhoto').files[0];
+
+            let image = null;
+            if (imageFile) {
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    image = event.target.result; // base64 encoded image
+                    savePlace(name, description, phone, category, image);
+                };
+                reader.readAsDataURL(imageFile); // Convert the file to base64 and call savePlace once done
+            } else {
+                savePlace(name, description, phone, category, image); // No image provided
+            }
+        }
+
+        // Save the place and update the view
+        function savePlace(name, description, phone, category, image) {
+            if (!name) {
+                alert('Place name is required');
+                return;
+            }
+
+            const language = localStorage.getItem('language') || 'en';
+            const newPlace = {
+                name,
+                description,
+                phone,
+                image,
+                category
+            };
+
+            placesData[language].push(newPlace);
+            localStorage.setItem('places', JSON.stringify(placesData)); // Store updated places in localStorage
+
+            renderPlaces(language); // Re-render the places
+            resetForm(); // Reset the form after submission
+        }
+
+        // Reset the form fields
+        function resetForm() {
+            document.getElementById('placeName').value = '';
+            document.getElementById('placeDescription').value = '';
+            document.getElementById('placePhone').value = '';
+            document.getElementById('placePhoto').value = '';
+            document.getElementById('image-preview').src = ''; // Clear the preview image
+        }
+
+        // Display the selected image as preview
+        document.getElementById('placePhoto').addEventListener('change', function(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    document.getElementById('image-preview').src = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            } else {
+                document.getElementById('image-preview').src = '';
+            }
+        });
+
+        // Search places by name or description
+        function searchPlaces() {
+            const searchText = document.getElementById('searchBox').value.toLowerCase();
+            const language = localStorage.getItem('language') || 'en';
+            const filteredPlaces = placesData[language].filter(place =>
+                place.name.toLowerCase().includes(searchText) ||
+                (place.description && place.description.toLowerCase().includes(searchText))
+            );
+            renderFilteredPlaces(filteredPlaces);
+        }
+
+        // Render filtered places
+        function renderFilteredPlaces(filteredPlaces) {
+            const placesList = document.getElementById('places-list');
+            placesList.innerHTML = "";
+            filteredPlaces.forEach(place => {
+                const card = document.createElement('div');
+                card.classList.add('place-card');
+                card.innerHTML = `
+                    <img src="${place.image || 'https://via.placeholder.com/400x300?text=No+Image'}" alt="${place.name}" />
+                    <h3>${place.name}</h3>
+                    <p>${place.description || 'No description provided'}</p>
+                    <p><strong>Phone:</strong> ${place.phone || 'Not provided'}</p>
+                    <p><strong>Category:</strong> ${place.category}</p>
+                `;
+                placesList.appendChild(card);
+            });
+        }
+
+        // On page load, check if language is already selected
+        window.onload = () => {
+            const language = localStorage.getItem('language') || 'en'; // default to English if not set
+            showAppContent(language);
+            const storedPlaces = JSON.parse(localStorage.getItem('places'));
+            if (storedPlaces) {
+                placesData.en = storedPlaces.en || [];
+                placesData.ar = storedPlaces.ar || [];
+            }
+        };
+    </script>
+</body>
+</html>
